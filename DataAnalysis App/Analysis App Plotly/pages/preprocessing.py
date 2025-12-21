@@ -67,7 +67,9 @@ layout = html.Div([
                 {'label': 'Drop Rows', 'value': 'drop_rows'},
                 {'label': 'Fill Mean (Numeric)', 'value': 'mean'},
                 {'label': 'Fill Median (Numeric)', 'value': 'median'},
-                {'label': 'Fill Mode (Frequent)', 'value': 'mode'}
+                {'label': 'Fill Mode (Frequent)', 'value': 'mode'},
+                {'label': 'Fill Forward (Value Above)', 'value': 'ffill'}, # NEW
+                {'label': 'Fill Backward (Value Below)', 'value': 'bfill'} # NEW
             ],
             value='drop_rows'
         ),
@@ -312,7 +314,7 @@ def process_data(b1, b2, b3, b4, b5, b6, b7, json_data,
     alert_type = "alert alert-success"
 
     try:
-        # 1. Missing Values
+        # 1. Missing Values (UPDATED WITH FFILL/BFILL)
         if button_id == 'btn-apply-missing':
             if miss_action == 'drop_rows': df.dropna(subset=[miss_col], inplace=True)
             elif miss_action == 'mean': 
@@ -322,7 +324,14 @@ def process_data(b1, b2, b3, b4, b5, b6, b7, json_data,
                 if pd.api.types.is_numeric_dtype(df[miss_col]): df[miss_col].fillna(df[miss_col].median(), inplace=True)
                 else: return dash.no_update, html.Div("Column is not numeric. Convert type first.", className="alert alert-warning")
             elif miss_action == 'mode': df[miss_col].fillna(df[miss_col].mode()[0], inplace=True)
-            msg = f"Applied {miss_action} to {miss_col}"
+            elif miss_action == 'ffill':
+                df[miss_col] = df[miss_col].ffill()
+                msg = f"Filled {miss_col} with value above (Forward Fill)"
+            elif miss_action == 'bfill':
+                df[miss_col] = df[miss_col].bfill()
+                msg = f"Filled {miss_col} with value below (Backward Fill)"
+            
+            if not msg: msg = f"Applied {miss_action} to {miss_col}"
 
         # 2. Types
         elif button_id == 'btn-apply-type':
@@ -349,7 +358,7 @@ def process_data(b1, b2, b3, b4, b5, b6, b7, json_data,
             new_col = f"{disc_col}_bins"
             if disc_strat == 'uniform': df[new_col] = pd.cut(df[disc_col], bins=disc_bins, labels=False)
             else: df[new_col] = pd.qcut(df[disc_col], q=disc_bins, labels=False, duplicates='drop')
-            msg = f"Created bins for {disc_col}"
+            msg = f"Binned {disc_col}"
 
         # 6. Normalize
         elif button_id == 'btn-apply-norm':
